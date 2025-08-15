@@ -19,11 +19,11 @@ func NewRequestRepository(db *sql.DB) *RequestRepository {
 	}
 }
 
-func (r *RequestRepository) InsertRequest(name, email, text, phone string) (int, error) {
+func (r *RequestRepository) InsertRequest(name, text, phone string) (int, error) {
 	var id int
 	err := r.db.QueryRow(
-		"INSERT INTO requests (name, email, text, phone) VALUES ($1, $2, $3, $4) RETURNING id",
-		name, email, text, phone).Scan(&id)
+		"INSERT INTO requests (name, text, phone) VALUES ($1, $2, $3) RETURNING id",
+		name, text, phone).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("could not insert request: %w", err)
 	}
@@ -31,7 +31,7 @@ func (r *RequestRepository) InsertRequest(name, email, text, phone string) (int,
 }
 
 func (r *RequestRepository) SelectRequests() ([]dto.Request, error) {
-	rows, err := r.db.Query("SELECT id, name, email, text, phone FROM requests")
+	rows, err := r.db.Query("SELECT id, name, text, phone FROM requests")
 	if err != nil {
 		return nil, fmt.Errorf("could not query requests: %w", err)
 	}
@@ -40,7 +40,7 @@ func (r *RequestRepository) SelectRequests() ([]dto.Request, error) {
 	var requests []dto.Request
 	for rows.Next() {
 		var request dto.Request
-		if err := rows.Scan(&request.ID, &request.Name, &request.Email, &request.Text, &request.Phone); err != nil {
+		if err := rows.Scan(&request.ID, &request.Name, &request.Text, &request.Phone); err != nil {
 			return nil, fmt.Errorf("could not scan request: %w", err)
 		}
 		requests = append(requests, request)

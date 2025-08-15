@@ -18,8 +18,8 @@ func NewRequestService(db *sql.DB, repo repositories.RequestRepository) *Request
 	}
 }
 
-func (s *RequestService) CreateRequest(name, email, text, phone string) (int, error) {
-	id, err := s.repo.InsertRequest(name, email, text, phone)
+func (s *RequestService) CreateRequest(name, text, phone string) (int, error) {
+	id, err := s.repo.InsertRequest(name, text, phone)
 	if err != nil {
 		return 0, err
 	}

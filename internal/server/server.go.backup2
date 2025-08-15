@@ -18,12 +18,9 @@ func NewServer(clientHandler *handlers.RequestHandler) *Server {
 
 func enableCORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Allow requests from the frontend domain
-		w.Header().Set("Access-Control-Allow-Origin", "https://voenhelper.ru")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -37,12 +34,6 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	
-	// Add CORS headers to root handler as well
-	w.Header().Set("Access-Control-Allow-Origin", "https://voenhelper.ru")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	html := `<!DOCTYPE html>
@@ -79,7 +70,7 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
     </div>
     
     <div style="margin-top: 40px; text-align: center; color: #666;">
-        <p>Frontend available at: <a href="https://voenhelper.ru">voenhelper.ru</a></p>
+        <p>API available at: <a href="https://www.voenhelper.ru">www.voenhelper.ru</a></p>
     </div>
 </body>
 </html>`
@@ -89,8 +80,8 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Start() {
-	// Setup routes with CORS middleware
-	http.HandleFunc("/", enableCORS(s.rootHandler))
+	// Setup routes
+	http.HandleFunc("/", s.rootHandler)
 	http.HandleFunc("/get", enableCORS(s.clientHandler.GetRequestsHandler))
 	http.HandleFunc("/create", enableCORS(s.clientHandler.CreateRequestHandler))
 

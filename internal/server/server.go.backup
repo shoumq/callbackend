@@ -18,12 +18,9 @@ func NewServer(clientHandler *handlers.RequestHandler) *Server {
 
 func enableCORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Allow requests from the frontend domain
-		w.Header().Set("Access-Control-Allow-Origin", "https://voenhelper.ru")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -32,65 +29,8 @@ func enableCORS(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-	
-	// Add CORS headers to root handler as well
-	w.Header().Set("Access-Control-Allow-Origin", "https://voenhelper.ru")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	html := `<!DOCTYPE html>
-<html>
-<head>
-    <title>Voenhelper API</title>
-    <meta charset="utf-8">
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
-        .header { text-align: center; margin-bottom: 40px; }
-        .endpoint { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
-        .method { font-weight: bold; color: #2196F3; }
-        .path { font-family: monospace; background: #fff; padding: 5px 10px; border-radius: 3px; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>🚀 Voenhelper API</h1>
-        <p>API Service is running successfully</p>
-    </div>
-    
-    <h2>Available Endpoints:</h2>
-    
-    <div class="endpoint">
-        <div class="method">GET</div>
-        <div class="path">/get</div>
-        <p>Retrieve requests</p>
-    </div>
-    
-    <div class="endpoint">
-        <div class="method">POST</div>
-        <div class="path">/create</div>
-        <p>Create new request</p>
-    </div>
-    
-    <div style="margin-top: 40px; text-align: center; color: #666;">
-        <p>Frontend available at: <a href="https://voenhelper.ru">voenhelper.ru</a></p>
-    </div>
-</body>
-</html>`
-	
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(html))
-}
-
 func (s *Server) Start() {
-	// Setup routes with CORS middleware
-	http.HandleFunc("/", enableCORS(s.rootHandler))
+	// Setup routes
 	http.HandleFunc("/get", enableCORS(s.clientHandler.GetRequestsHandler))
 	http.HandleFunc("/create", enableCORS(s.clientHandler.CreateRequestHandler))
 

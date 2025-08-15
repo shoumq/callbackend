@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"vasek/internal/services"
+	"golang.org/x/text/encoding/charmap"
 )
 
 type RequestHandler struct {
@@ -15,50 +16,86 @@ func NewRequestHandler(requestService *services.RequestService) *RequestHandler 
 }
 
 func (h *RequestHandler) CreateRequestHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
 
-	name := r.FormValue("name")
-	email := r.FormValue("email")
-	text := r.FormValue("text")
-	phone := r.FormValue("phone")
+    // Получаем данные из формы
+    name := r.FormValue("name")
+    text := r.FormValue("text")
+    phone := r.FormValue("phone")
 
-	if name == "" || email == "" || text == "" {
-		http.Error(w, "Missing required fields", http.StatusBadRequest)
-		return
-	}
+    if name == "" || text == "" {
+        http.Error(w, "Missing required fields", http.StatusBadRequest)
+        return
+    }
 
-	id, err := h.requestService.CreateRequest(name, email, text, phone)
-	if err != nil {
-		http.Error(w, "Failed to create request: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+    // Попытка перекодировать из Windows-1251 в UTF-8
+    if utf8Name, err := charmap.Windows1251.NewDecoder().String(name); err == nil {
+        name = utf8Name
+    }
+    if utf8Text, err := charmap.Windows1251.NewDecoder().String(text); err == nil {
+        text = utf8Text
+    }
 
-	response := map[string]interface{}{
-		"id":      id,
-		"message": "Request created successfully",
-	}
+    // Создание запроса через сервис
+    id, err := h.requestService.CreateRequest(name, text, phone)
+    if err != nil {
+        http.Error(w, "Failed to create request: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
+    // Формируем ответ
+    response := map[string]interface{}{
+        "id":      id,
+        "message": "Request created successfully",
+    }
+
+    w.Header().Set("Content-Type", "application/json; charset=utf-8")
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(response)
+}
+
+func fixEncoding(input string) (string, error) {
+    decoder := charmap.Windows1251.NewDecoder()
+    output, err := decoder.String(input)
+    if err != nil {
+        return "", err
+    }
+    return output, nil
 }
 
 func (h *RequestHandler) GetRequestsHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+    if r.Method != http.MethodGet {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
 
-	requests, err := h.requestService.GetRequest()
-	if err != nil {
-		http.Error(w, "Failed to get requests: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+    // Получаем заявки из сервиса
+    requests, err := h.requestService.GetRequest()
+    if err != nil {
+        http.Error(w, "Failed to get requests: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(requests)
+    // Перекодируем поля из Windows-1251 в UTF-8, если необходимо
+    for i := range requests {
+        if utf8Name, err := charmap.Windows1251.NewDecoder().String(requests[i].Name); err == nil {
+            requests[i].Name = utf8Name
+        }
+        if utf8Text, err := charmap.Windows1251.NewDecoder().String(requests[i].Text); err == nil {
+            requests[i].Text = utf8Text
+        }
+    }
+
+    // Устанавливаем корректный заголовок JSON с UTF-8
+    w.Header().Set("Content-Type", "application/json; charset=utf-8")
+    w.WriteHeader(http.StatusOK)
+
+    // Отправляем JSON клиенту
+    if err := json.NewEncoder(w).Encode(requests); err != nil {
+        http.Error(w, "Failed to encode JSON: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
 }
